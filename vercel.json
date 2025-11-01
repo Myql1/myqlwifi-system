@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "wifi-payment-system/app.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/wifi-payment-system/app.js"
+    }
+  ],
+  "functions": {
+    "wifi-payment-system/app.js": {
+      "maxDuration": 30
+    }
+  }
+}
