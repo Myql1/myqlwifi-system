@@ -4,13 +4,14 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  host: process.env.DB_HOST || 'your_production_db_host',
+  user: process.env.DB_USER || 'your_db_user',
+  password: process.env.DB_PASSWORD || 'your_db_password',
   database: process.env.DB_NAME || 'myql_wifi',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Test database connection
