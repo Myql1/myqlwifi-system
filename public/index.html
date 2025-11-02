@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Payment Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
+        .package { border: 1px solid #ddd; padding: 15px; margin: 10px 0; cursor: pointer; }
+        .package.selected { border-color: #007bff; background: #f8f9fa; }
+        button { background: #007bff; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; }
+        input { width: 100%; padding: 10px; margin: 5px 0; }
+        #result { margin-top: 20px; padding: 15px; display: none; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>WiFi Internet Access</h1>
+    <p>Select your package and pay via Mobile Money</p>
+
+    <div class="package" data-package="1day" data-amount="1000">
+        <h3>1 Day Access - 1,000 UGX</h3>
+        <p>Full day internet access</p>
+    </div>
+
+    <div class="package" data-package="3days" data-amount="2500">
+        <h3>3 Days Access - 2,500 UGX</h3>
+        <p>Three days internet access</p>
+    </div>
+
+    <div class="package" data-package="1week" data-amount="5000">
+        <h3>1 Week Access - 5,000 UGX</h3>
+        <p>Weekly unlimited access</p>
+    </div>
+
+    <div class="package" data-package="monthly" data-amount="20000">
+        <h3>Monthly Access - 20,000 UGX</h3>
+        <p>Monthly unlimited access</p>
+    </div>
+
+    <input type="tel" id="phone" placeholder="Enter your phone number (0771234567)" required>
+    <select id="provider" required>
+        <option value="">Select Payment Provider</option>
+        <option value="airtel">Airtel Money</option>
+        <option value="mtn">MTN Mobile Money</option>
+    </select>
+    <button onclick="processPayment()">Pay Now</button>
+
+    <div id="result"></div>
+
+    <script>
+        let selectedPackage = null;
+
+        // Package selection
+        document.querySelectorAll('.package').forEach(pkg => {
+            pkg.addEventListener('click', () => {
+                document.querySelectorAll('.package').forEach(p => p.classList.remove('selected'));
+                pkg.classList.add('selected');
+                selectedPackage = {
+                    package: pkg.dataset.package,
+                    amount: parseInt(pkg.dataset.amount)
+                };
+            });
+        });
+
+        // Payment processing
+        async function processPayment() {
+            const phone = document.getElementById('phone').value;
+            const provider = document.getElementById('provider').value;
+
+            if (!selectedPackage || !phone || !provider) {
+                alert('Please select a package, enter your phone number, and choose a payment provider');
+                return;
+            }
+
+            // Show processing message
+            document.getElementById('result').innerHTML =
+                '<div style="color: #007bff; text-align: center;">' +
+                '<h3>Processing Payment...</h3>' +
+                '<p>Please complete the payment prompt on your phone.</p>' +
+                '</div>';
+            document.getElementById('result').style.display = 'block';
+
+            try {
+                const response = await fetch('/api/payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phone,
+                        package: selectedPackage.package,
+                        amount: selectedPackage.amount,
+                        provider: provider
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('result').innerHTML =
+                        '<div class="success">' +
+                        '<h3>Payment Initiated!</h3>' +
+                        '<p><strong>Transaction ID:</strong> ' + result.transaction_id + '</p>' +
+                        '<p><strong>Phone:</strong> ' + phone + '</p>' +
+                        '<p><strong>Package:</strong> ' + selectedPackage.package + '</p>' +
+                        '<p><strong>Provider:</strong> ' + provider.toUpperCase() + '</p>' +
+                        '<p>Please complete the payment on your phone. You will receive a voucher code once payment is confirmed.</p>' +
+                        '<button onclick="checkPaymentStatus(\'' + result.transaction_id + '\')">Check Payment Status</button>' +
+                        '</div>';
+                } else {
+                    document.getElementById('result').innerHTML =
+                        '<div style="color: #dc3545;">' +
+                        '<h3>Payment Failed</h3>' +
+                        '<p>' + result.error + '</p>' +
+                        '</div>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    '<div style="color: #dc3545;">' +
+                    '<h3>Error</h3>' +
+                    '<p>Error processing payment: ' + error.message + '</p>' +
+                    '</div>';
+            }
+        }
+
+        // Check payment status
+        async function checkPaymentStatus(transactionId) {
+            try {
+                const response = await fetch('/api/payment-status/' + transactionId);
+                const result = await response.json();
+
+                if (result.success && result.status === 'completed' && result.voucher_code) {
+                    document.getElementById('result').innerHTML =
+                        '<div class="success">' +
+                        '<h3>Payment Successful!</h3>' +
+                        '<p><strong>Voucher Code:</strong> ' + result.voucher_code + '</p>' +
+                        '<p><strong>Transaction ID:</strong> ' + transactionId + '</p>' +
+                        '<p>Use this code to access WiFi. An SMS has been sent to your phone.</p>' +
+                        '</div>';
+                } else if (result.status === 'processing') {
+                    alert('Payment is still processing. Please wait and try again.');
+                } else {
+                    alert('Payment not completed yet or failed. Please check your phone and try again.');
+                }
+            } catch (error) {
+                alert('Error checking payment status: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
